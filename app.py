@@ -232,7 +232,7 @@ class HealthApp(ctk.CTk):
         
         ctk.CTkLabel(self.content_frame, text="Record Medical Visit", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=(0, 20))
         
-        form = ctk.CTkFrame(self.content_frame, corner_radius=15, padding=20)
+        form = ctk.CTkFrame(self.content_frame, corner_radius=15)
         form.pack(fill="both", expand=True)
 
         # Left Side: Info
