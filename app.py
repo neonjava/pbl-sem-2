@@ -16,7 +16,7 @@ class HealthApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("NeonHealth - Record Management System")
+        self.title("Clinic Management - Record System")
         self.geometry("1100x700")
 
         # Initialize Database and Auth
@@ -46,7 +46,7 @@ class HealthApp(ctk.CTk):
         login_frame = ctk.CTkFrame(self, width=400, height=500, corner_radius=15)
         login_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        ctk.CTkLabel(login_frame, text="NeonHealth", font=ctk.CTkFont(size=30, weight="bold"), text_color="#1a73e8").pack(pady=(40, 5))
+        ctk.CTkLabel(login_frame, text="Clinic Management", font=ctk.CTkFont(size=30, weight="bold"), text_color="#1a73e8").pack(pady=(40, 5))
         ctk.CTkLabel(login_frame, text="Clinic Management System", font=ctk.CTkFont(size=14)).pack(pady=(0, 30))
 
         self.user_entry = ctk.CTkEntry(login_frame, width=300, height=45, placeholder_text="Username")
@@ -79,7 +79,7 @@ class HealthApp(ctk.CTk):
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
-        ctk.CTkLabel(self.sidebar_frame, text="NeonHealth", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=20)
+        ctk.CTkLabel(self.sidebar_frame, text="HealthFlow", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=20)
 
         self.nav_btns = []
         if role == 'admin':
