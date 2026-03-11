@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS patients (
     gender ENUM('Male', 'Female', 'Other'),
     contact VARCHAR(15),
     address TEXT,
+    status ENUM('Active', 'Inactive') DEFAULT 'Active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -30,6 +31,10 @@ CREATE TABLE IF NOT EXISTS visits (
     diagnosis TEXT,
     prescription TEXT,
     doctor_name VARCHAR(100),
+    blood_pressure VARCHAR(20),
+    temperature FLOAT,
+    weight FLOAT,
+    pulse INT,
     FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE
 );
 
