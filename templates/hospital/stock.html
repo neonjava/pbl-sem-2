@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">Manage Stock</div>
+
+<div class="bb-card mb-4" style="max-width: 500px;">
+    <div class="bb-card-header">Update Stocks</div>
+    <div class="bb-card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="blood_group" class="bb-label">Blood Group</label>
+                <input name="blood_group" id="blood_group" class="bb-input" placeholder="e.g. O+, A-" required>
+            </div>
+            <div class="mb-3">
+                <label for="units" class="bb-label">Units</label>
+                <input name="units" id="units" class="bb-input" type="number" placeholder="Enter units" required>
+            </div>
+            <button class="btn-bb-primary w-100">Update Stock</button>
+        </form>
+    </div>
+</div>
+
+<div class="bb-card">
+    <div class="bb-card-header">Current Inventory</div>
+    <div class="bb-card-body">
+        <table class="bb-table">
+            <thead>
+                <tr>
+                    <th>Blood Group</th>
+                    <th>Units</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stocks %}
+                <tr>
+                    <td><span class="bg-pill {{ stock.blood_group|lower|replace('+','p')|replace('-','m') }}">{{
+                            stock.blood_group }}</span></td>
+                    <td>{{ stock.units }}</td>
+                    <td>
+                        {% if stock.units < 10 %} <span class="bb-badge bb-badge-red">CRITICAL</span>
+                            {% elif stock.units < 50 %} <span class="bb-badge bb-badge-amber">URGENT</span>
+                                {% else %}
+                                <span class="bb-badge bb-badge-green">GOOD</span>
+                                {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-muted text-center py-3">No stock inventory found. Add stocks using the
+                        form above.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

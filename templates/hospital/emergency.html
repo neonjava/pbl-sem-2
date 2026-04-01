@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">Emergency Requests</div>
+
+<p class="text-danger mb-4"><span class="pulse">🚨</span> All requests here reflect live emergency blood needs.</p>
+
+<div class="row g-3">
+    {% for req in requests if req.urgency == 'Critical' or req.urgency == 'Urgent' %}
+    <div class="col-md-6 col-lg-4">
+        <div class="sos-card {{ req.urgency|lower if req.urgency else 'normal' }}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="bg-pill {{ req.blood_group|lower|replace('+','p')|replace('-','m') }}">{{ req.blood_group
+                    }}</span>
+                <span class="bb-badge bb-badge-red">{{ req.urgency or 'CRITICAL' }}</span>
+            </div>
+            <div class="sos-card-body">
+                <p><strong>Units Required:</strong> {{ req.units }}</p>
+                <p><strong>Status:</strong> {{ req.status }}</p>
+                <p class="text-muted small"><strong>Published:</strong> {{ req.created_at.strftime('%Y-%m-%d %H:%M') if
+                    req.created_at else 'Recent' }}</p>
+            </div>
+            <div class="sos-card-footer mt-3">
+                <button class="btn-bb-primary w-100">Coordinate Action</button>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="bb-card">
+            <div class="bb-card-body text-center py-5">
+                <div class="text-success mb-2" style="font-size: 2rem;">🛡️</div>
+                <h5 class="text-muted">No emergency requests active. All is well.</h5>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

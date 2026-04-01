@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-header">Hospital Dashboard</div>
+
+<div class="bb-card mb-4">
+    <div class="bb-card-header">Current Blood Stock</div>
+    <div class="bb-card-body">
+        <div class="row g-3">
+            {% for stock in stocks %}
+            <div class="col-md-3">
+                <div class="stat-card red">
+                    <div class="stat-value">{{ stock.units }}</div>
+                    <div class="stat-label">{{ stock.blood_group }}</div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-3">No stock data available. Go to <a
+                    href="{{ url_for('hospital.stock') }}">Manage Stock</a> to add some.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="bb-card">
+    <div class="bb-card-header">Latest Requests</div>
+    <div class="bb-card-body">
+        <table class="bb-table">
+            <thead>
+                <tr>
+                    <th>Blood Group</th>
+                    <th>Status</th>
+                    <th>Units</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td><span class="bg-pill {{ req.blood_group|lower|replace('+','p')|replace('-','m') }}">{{
+                            req.blood_group }}</span></td>
+                    <td><span class="bb-badge bb-badge-amber">{{ req.status }}</span></td>
+                    <td>{{ req.units }}</td>
+                    <td><span class="bb-badge bb-badge-red">{{ req.urgency or 'Normal' }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-muted text-center py-3">No pending blood requests.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
