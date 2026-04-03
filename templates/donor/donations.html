@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1>Donation History</h1>
+    <p>All your contributions at a glance</p>
+  </div>
+  <a href="{{ url_for('donor.dashboard') }}" class="btn-bb-outline">← Dashboard</a>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card red">
+      <div class="stat-value">{{ donations|length }}</div>
+      <div class="stat-label">Total Donations</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card green">
+      <div class="stat-value">{{ donations|selectattr('status','equalto','completed')|list|length }}</div>
+      <div class="stat-label">Completed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card blue">
+      <div class="stat-value">
+        {% set total_units = namespace(val=0) %}
+        {% for d in donations %}{% set total_units.val = total_units.val + (d.units or 0) %}{% endfor %}
+        {{ total_units.val }}
+      </div>
+      <div class="stat-label">Units Donated</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card amber">
+      <div class="stat-value">{{ donor.blood_group if donor else '—' }}</div>
+      <div class="stat-label">Blood Group</div>
+    </div>
+  </div>
+</div>
+
+<!-- Donation Table -->
+<div class="bb-card">
+  <div class="bb-card-header">All Donations</div>
+  <div class="bb-card-body">
+    {% if donations %}
+    <table class="bb-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Hospital</th>
+          <th>Blood Group</th>
+          <th>Units</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in donations %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ d.date.strftime('%d %b %Y') if d.date else '—' }}</td>
+          <td>{{ d.hospital.name if d.hospital else '—' }}</td>
+          <td>
+            <span class="bg-pill {{ d.blood_group|lower|replace('+','p')|replace('-','m') }}">
+              {{ d.blood_group }}
+            </span>
+          </td>
+          <td>{{ d.units or '—' }}</td>
+          <td>
+            {% if d.status == 'completed' %}
+              <span class="bb-badge bb-badge-green">Completed</span>
+            {% elif d.status == 'pending' %}
+              <span class="bb-badge bb-badge-amber">Pending</span>
+            {% else %}
+              <span class="bb-badge bb-badge-gray">{{ d.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ d.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="text-center py-5">
+        <p class="text-muted mb-3">You haven't made any donations yet.</p>
+        <a href="{{ url_for('public.home') }}" class="btn-bb-primary">Find a Donation Camp</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

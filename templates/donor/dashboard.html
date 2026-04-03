@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Donor Dashboard</h1>
+  <p>Welcome, {{ user.name }}</p>
+</div>
+
+<!-- Eligibility Banner -->
+<div class="bb-card mb-4 {% if eligible %}border-success{% else %}border-danger{% endif %}">
+  <div class="bb-card-body d-flex align-items-center gap-3">
+    {% if eligible %}
+      <span class="pulse"></span>
+      <div>
+        <strong class="text-success">You are eligible to donate!</strong>
+        <p class="mb-0 text-muted" style="font-size:0.9rem;">{{ eligibility_reason }}</p>
+      </div>
+     <a href="/" class="btn-bb-green ms-auto">Find a Camp</a>
+    {% else %}
+      <div>
+        <strong class="text-danger">Not eligible right now</strong>
+        <p class="mb-0 text-muted" style="font-size:0.9rem;">{{ eligibility_reason }}</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card red">
+      <div class="stat-value">{{ donations|length }}</div>
+      <div class="stat-label">Total Donations</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card green">
+      <div class="stat-value">{{ badges|length }}</div>
+      <div class="stat-label">Badges Earned</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card blue">
+      <div class="stat-value">{{ donor.blood_group if donor else '—' }}</div>
+      <div class="stat-label">Blood Group</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card amber">
+      <div class="stat-value">{{ 'Yes' if donor and donor.available else 'No' }}</div>
+      <div class="stat-label">Available</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Donations -->
+<div class="bb-card mb-4">
+  <div class="bb-card-header d-flex justify-content-between align-items-center">
+    Recent Donations
+    <a href="{{ url_for('donor.donations') }}" class="btn-bb-outline">View All</a>
+  </div>
+  <div class="bb-card-body">
+    {% if donations %}
+    <table class="bb-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Hospital</th>
+          <th>Blood Group</th>
+          <th>Units</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in donations %}
+        <tr>
+          <td>{{ d.date.strftime('%d %b %Y') if d.date else '—' }}</td>
+          <td>{{ d.hospital.name if d.hospital else '—' }}</td>
+          <td><span class="bg-pill {{ d.blood_group|lower|replace('+','p')|replace('-','m') }}">{{ d.blood_group }}</span></td>
+          <td>{{ d.units }}</td>
+          <td><span class="bb-badge bb-badge-green">{{ d.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="text-muted text-center py-3">No donations yet. Be a hero — donate blood!</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Badges -->
+{% if badges %}
+<div class="bb-card">
+  <div class="bb-card-header">Your Badges</div>
+  <div class="bb-card-body d-flex flex-wrap gap-3">
+    {% for b in badges %}
+    <div class="achievement-card">
+      <div class="achievement-icon">🏅</div>
+      <div class="achievement-name">{{ b.name }}</div>
+      <div class="achievement-desc">{{ b.description }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block public_content %}
+<div class="page-header">
+  <h1>Create Account</h1>
+  <p>Join BloodBridge and save lives</p>
+</div>
+
+<div class="bb-card" style="max-width:520px;margin:0 auto;">
+  <div class="bb-card-header">New Account</div>
+  <div class="bb-card-body">
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      <div class="mb-3">
+        <label class="bb-label" for="name">Full Name</label>
+        <input class="bb-input" type="text" id="name" name="name" required placeholder="Your full name">
+      </div>
+      <div class="mb-3">
+        <label class="bb-label" for="email">Email Address</label>
+        <input class="bb-input" type="email" id="email" name="email" required placeholder="you@example.com">
+      </div>
+      <div class="mb-3">
+        <label class="bb-label" for="phone">Phone Number</label>
+        <input class="bb-input" type="tel" id="phone" name="phone" placeholder="+91 XXXXX XXXXX">
+      </div>
+      <div class="mb-3">
+        <label class="bb-label" for="password">Password</label>
+        <input class="bb-input" type="password" id="password" name="password" required placeholder="Min 8 characters">
+      </div>
+      <div class="mb-3">
+        <label class="bb-label" for="role">I am a</label>
+        <select class="bb-select" id="role" name="role">
+          <option value="donor">Donor</option>
+          <option value="recipient">Recipient</option>
+          <option value="hospital">Hospital</option>
+        </select>
+      </div>
+      <div class="mb-3" id="blood-group-field">
+        <label class="bb-label" for="blood_group">Blood Group</label>
+        <select class="bb-select" id="blood_group" name="blood_group">
+          <option value="">Select blood group</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-bb-primary w-100">Create Account</button>
+    </form>
+    <p class="text-center mt-3" style="font-size:0.9rem;">
+      Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  const roleSelect = document.getElementById('role');
+  const bgField = document.getElementById('blood-group-field');
+  function toggleBG() {
+    bgField.style.display = roleSelect.value === 'donor' ? 'block' : 'none';
+  }
+  roleSelect.addEventListener('change', toggleBG);
+  toggleBG();
+</script>
+{% endblock %}
