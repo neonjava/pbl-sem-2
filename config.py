@@ -1,5 +1,20 @@
-# MySQL Database Configuration
-DB_HOST = "localhost"
-DB_USER = "root"
-DB_PASSWORD = "REDACTED_DB_PASSWORD"
-DB_NAME = "health_record_db"
+# ==========================================
+# DATABASE CREDENTIALS - LifeSaver Network
+# ==========================================
+
+# Set to True to use MySQL, False to use SQLite Fallback
+USE_MYSQL = True 
+
+# MySQL Configuration
+MYSQL_CONFIG = {
+    'host': 'localhost',
+    'user': 'lifesaver_user',
+    'password': 'lifesaver_pass',
+    'database': 'lifesaver_db'
+}
+
+# SQLite Fallback Configuration
+SQLITE_DB = "donor_data_minimal.db"
+
+# Flask Secret Key
+SECRET_KEY = "lifesaver_mysql_secret_777"

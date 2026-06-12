@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Emergency - LifeSaver</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 640px;">
+            <div class="auth-header">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h2>Emergency Blood SOS</h2>
+                <p style="color: var(--gray); margin-top: 5px;">Static demo form.</p>
+            </div>
+
+            <div class="alert alert-success" style="text-align: center; display: none;" id="sosConfirm">
+                SOS submitted! Admin alert will flash.
+            </div>
+
+            <form onsubmit="return triggerSOS(event);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Requester Name</label>
+                        <input type="text" id="requester_name" placeholder="Full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" id="contact" placeholder="+91 9XXXXXXXXX" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select id="blood_type" required>
+                            <option value="">Select...</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Units Needed</label>
+                        <input type="number" id="units_needed" min="1" placeholder="Units" required>
+                    </div>
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" id="city" placeholder="City" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Emergency Notes</label>
+                    <input type="text" id="notes" placeholder="Location, hospital, urgency details">
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; border: none; cursor: pointer;">Send SOS Request</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                Hospital staff? <a href="hospital_login.html" style="color: var(--primary); font-weight: 700; text-decoration: none;">Open Hospital Dashboard</a>
+            </div>
+            <div style="text-align: center; margin-top: 0.6rem; font-size: 0.85rem;">
+                <a href="index.html" style="color: var(--secondary); font-weight: 700; text-decoration: none;">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/db.js"></script>
+    <script>
+        function triggerSOS(event) {
+            event.preventDefault();
+            const name = document.getElementById("requester_name").value;
+            const contact = document.getElementById("contact").value;
+            const bloodType = document.getElementById("blood_type").value;
+            const units = document.getElementById("units_needed").value;
+            const city = document.getElementById("city").value;
+            const notes = document.getElementById("notes").value;
+
+            addSOS(name, bloodType, units, city, contact, notes);
+            
+            document.getElementById("sosConfirm").style.display = "block";
+            document.getElementById("sosConfirm").textContent = "Emergency SOS sent! Nearby hospitals and admins are notified.";
+            
+            // Clear form
+            event.target.reset();
+            return false;
+        }
+    </script>
+</body>
+</html>

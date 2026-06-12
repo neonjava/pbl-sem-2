@@ -1,379 +1,583 @@
-import tkinter as tk
-import customtkinter as ctk
-from tkinter import messagebox
-from PIL import Image
+from flask import Flask, render_template, request, redirect, session, flash, url_for
+import mysql.connector
+from mysql.connector import Error
+import sqlite3
 import os
-from database import Database
-from auth import Auth
-from models import PatientManager, VisitManager, AccountManager
-from datetime import date
+from datetime import datetime, timedelta, date
+import secrets
+from matcher import find_matches
 
-# Set appearance mode and color theme
-ctk.set_appearance_mode("Light")
-ctk.set_default_color_theme("blue")
+# Import Configuration from local config.py
+try:
+    from config import MYSQL_CONFIG, USE_MYSQL, SQLITE_DB, SECRET_KEY
+except ImportError:
+    USE_MYSQL = False
+    SQLITE_DB = "donor_data_fallback.db"
+    SECRET_KEY = "fallback_secret"
+    MYSQL_CONFIG = {}
 
-class HealthApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+app = Flask(__name__)
+app.secret_key = SECRET_KEY
 
-        self.title("Clinic Management - Record System")
-        self.geometry("1100x700")
+def get_db():
+    if USE_MYSQL:
+        try:
+            conn = mysql.connector.connect(**MYSQL_CONFIG)
+            return conn
+        except Error as e:
+            print(f"MySQL Error: {e}")
+            return None
+    else:
+        conn = sqlite3.connect(SQLITE_DB)
+        conn.row_factory = sqlite3.Row
+        return conn
 
-        # Initialize Database and Auth
-        self.db = Database()
-        if not self.db.connect():
-            messagebox.showerror("Error", "Could not connect to database. Check config.py.")
-            
-        self.auth = Auth(self.db)
-        self.patient_manager = PatientManager(self.db)
-        self.visit_manager = VisitManager(self.db)
-        self.account_manager = AccountManager(self.db)
-
-        # Main Layout
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-
-        self.show_login()
-
-    def clear_screen(self):
-        for widget in self.winfo_children():
-            widget.destroy()
-
-    def show_login(self):
-        self.clear_screen()
-        self.grid_columnconfigure(0, weight=1)
-        
-        login_frame = ctk.CTkFrame(self, width=400, height=500, corner_radius=15)
-        login_frame.place(relx=0.5, rely=0.5, anchor="center")
-
-        ctk.CTkLabel(login_frame, text="Clinic Management", font=ctk.CTkFont(size=30, weight="bold"), text_color="#1a73e8").pack(pady=(40, 5))
-        ctk.CTkLabel(login_frame, text="Clinic Management System", font=ctk.CTkFont(size=14)).pack(pady=(0, 30))
-
-        self.user_entry = ctk.CTkEntry(login_frame, width=300, height=45, placeholder_text="Username")
-        self.user_entry.pack(pady=10)
-
-        self.pass_entry = ctk.CTkEntry(login_frame, width=300, height=45, placeholder_text="Password", show="*")
-        self.pass_entry.pack(pady=10)
-
-        ctk.CTkButton(login_frame, text="Login", command=self.handle_login, width=300, height=45, font=ctk.CTkFont(weight="bold")).pack(pady=30)
-        
-        ctk.CTkLabel(login_frame, text="Default Admin: admin / REDACTED_PASSWORD", font=ctk.CTkFont(size=11), text_color="gray").pack()
-
-    def handle_login(self):
-        username = self.user_entry.get()
-        password = self.pass_entry.get()
-        
-        success, role = self.auth.login(username, password)
-        if success:
-            self.setup_main_ui(role)
-        else:
-            messagebox.showerror("Login Failed", "Invalid username or password")
-
-    def setup_main_ui(self, role):
-        self.clear_screen()
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
-
-        # Sidebar
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
-
-        ctk.CTkLabel(self.sidebar_frame, text="HealthFlow", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=20)
-
-        self.nav_btns = []
-        if role == 'admin':
-            self.btn_dash = ctk.CTkButton(self.sidebar_frame, text="Dashboard", command=self.show_dashboard, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
-            self.btn_dash.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
-            
-            self.btn_patients = ctk.CTkButton(self.sidebar_frame, text="Patients", command=self.show_patients_view, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
-            self.btn_patients.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
-
-            self.btn_visits = ctk.CTkButton(self.sidebar_frame, text="Record Visit", command=self.show_visits_view, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
-            self.btn_visits.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
-        else:
-            self.btn_profile = ctk.CTkButton(self.sidebar_frame, text="My Profile", command=self.show_patient_dashboard, fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"), anchor="w")
-            self.btn_profile.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
-
-        ctk.CTkButton(self.sidebar_frame, text="Logout", command=self.show_login, fg_color="#f44336", hover_color="#d32f2f").grid(row=5, column=0, padx=20, pady=20, sticky="ew")
-
-        # Main Content
-        self.content_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.content_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
-        
-        if role == 'admin': self.show_dashboard()
-        else: self.show_patient_dashboard()
-
-    def show_dashboard(self):
-        for widget in self.content_frame.winfo_children(): widget.destroy()
-        
-        stats = self.patient_manager.get_stats()
-        
-        ctk.CTkLabel(self.content_frame, text="Clinic Overview", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=(0, 20))
-        
-        stats_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        stats_frame.pack(fill="x", pady=10)
-        
-        # Stat Cards
-        self.create_stat_card(stats_frame, "Total Patients", str(stats['total_patients']), "#1a73e8").grid(row=0, column=0, padx=(0, 20))
-        self.create_stat_card(stats_frame, "Visits Today", str(stats['today_visits']), "#34a853").grid(row=0, column=1, padx=20)
-        
-        # Recent Patients table placeholder or search
-        ctk.CTkLabel(self.content_frame, text="Quick Actions", font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w", pady=(30, 10))
-        actions_frame = ctk.CTkFrame(self.content_frame)
-        actions_frame.pack(fill="x", pady=10)
-        
-        ctk.CTkButton(actions_frame, text="Register New Patient", command=self.show_patients_view).pack(side="left", padx=20, pady=20)
-        ctk.CTkButton(actions_frame, text="Add Visit Record", command=self.show_visits_view, fg_color="#34a853", hover_color="#2d8e47").pack(side="left", padx=20, pady=20)
-
-    def create_stat_card(self, parent, title, value, color):
-        card = ctk.CTkFrame(parent, width=200, height=120, corner_radius=10, border_width=2, border_color=color)
-        card.grid_propagate(False)
-        ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=14)).pack(pady=(20, 5))
-        ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=28, weight="bold"), text_color=color).pack()
-        return card
-
-    def show_patients_view(self):
-        for widget in self.content_frame.winfo_children(): widget.destroy()
-        
-        ctk.CTkLabel(self.content_frame, text="Patient Management", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=(0, 20))
-        
-        # Top tools
-        tool_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
-        tool_frame.pack(fill="x", pady=10)
-        
-        self.search_entry = ctk.CTkEntry(tool_frame, placeholder_text="Search by Name or ID...", width=300)
-        self.search_entry.pack(side="left", padx=(0, 10))
-        ctk.CTkButton(tool_frame, text="Search", width=100, command=self.handle_search).pack(side="left")
-        ctk.CTkButton(tool_frame, text="+ Add Patient", width=120, fg_color="#34a853", hover_color="#2d8e47", command=self.open_patient_dialog).pack(side="right")
-
-        # Results Table (Using a scrollable frame for list)
-        self.table_container = ctk.CTkScrollableFrame(self.content_frame, height=400)
-        self.table_container.pack(fill="both", expand=True, pady=10)
-        
-        self.refresh_patient_list()
-
-    def refresh_patient_list(self, patients=None):
-        for widget in self.table_container.winfo_children(): widget.destroy()
-        
-        # Header
-        h_frame = ctk.CTkFrame(self.table_container, fg_color="gray80", height=40)
-        h_frame.pack(fill="x", pady=2)
-        headers = ["ID", "Name", "Age", "Contact", "Actions"]
-        widths = [50, 200, 80, 150, 250]
-        
-        for i, h in enumerate(headers):
-            ctk.CTkLabel(h_frame, text=h, width=widths[i], font=ctk.CTkFont(weight="bold")).pack(side="left", padx=5)
-
-        if patients is None:
-            patients = self.patient_manager.get_all_patients()
-            
-        for p in patients:
-            row = ctk.CTkFrame(self.table_container, height=45)
-            row.pack(fill="x", pady=2)
-            
-            ctk.CTkLabel(row, text=str(p['patient_id']), width=50).pack(side="left", padx=5)
-            ctk.CTkLabel(row, text=p['name'], width=200, anchor="w").pack(side="left", padx=5)
-            ctk.CTkLabel(row, text=str(p['age']), width=80).pack(side="left", padx=5)
-            ctk.CTkLabel(row, text=p['contact'], width=150).pack(side="left", padx=5)
-            
-            btn_frame = ctk.CTkFrame(row, fg_color="transparent")
-            btn_frame.pack(side="right", padx=5)
-            
-            ctk.CTkButton(btn_frame, text="History", width=70, height=25, command=lambda pid=p['patient_id']: self.view_history(pid)).pack(side="left", padx=2)
-            ctk.CTkButton(btn_frame, text="Auth", width=60, height=25, fg_color="purple", command=lambda p=p: self.create_patient_login(p)).pack(side="left", padx=2)
-            ctk.CTkButton(btn_frame, text="Del", width=50, height=25, fg_color="#f44336", hover_color="#d32f2f", command=lambda pid=p['patient_id']: self.handle_delete_patient(pid)).pack(side="left", padx=2)
-
-    def handle_search(self):
-        term = self.search_entry.get()
-        if term:
-            results = self.patient_manager.search_patients(term)
-            self.refresh_patient_list(results)
-        else:
-            self.refresh_patient_list()
-
-    def open_patient_dialog(self, patient=None):
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Patient Information")
-        dialog.geometry("400x500")
-        dialog.attributes("-topmost", True)
-        
-        ctk.CTkLabel(dialog, text="Register Patient", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
-        
-        name_e = ctk.CTkEntry(dialog, placeholder_text="Full Name", width=300)
-        name_e.pack(pady=10)
-        
-        age_e = ctk.CTkEntry(dialog, placeholder_text="Age", width=300)
-        age_e.pack(pady=10)
-
-        gender_v = ctk.StringVar(value="Male")
-        gender_f = ctk.CTkFrame(dialog, fg_color="transparent")
-        gender_f.pack(pady=10)
-        ctk.CTkRadioButton(gender_f, text="Male", variable=gender_v, value="Male").pack(side="left", padx=10)
-        ctk.CTkRadioButton(gender_f, text="Female", variable=gender_v, value="Female").pack(side="left", padx=10)
-
-        contact_e = ctk.CTkEntry(dialog, placeholder_text="Contact Number", width=300)
-        contact_e.pack(pady=10)
-
-        addr_e = ctk.CTkEntry(dialog, placeholder_text="Address", width=300)
-        addr_e.pack(pady=10)
-
-        def save():
-            pid = self.patient_manager.add_patient(name_e.get(), age_e.get(), gender_v.get(), contact_e.get(), addr_e.get())
-            if pid:
-                messagebox.showinfo("Success", "Patient Registered Successfully")
-                dialog.destroy()
-                self.refresh_patient_list()
-        
-        ctk.CTkButton(dialog, text="Save Patient", command=save, width=300).pack(pady=30)
-
-    def show_visits_view(self):
-        for widget in self.content_frame.winfo_children(): widget.destroy()
-        
-        ctk.CTkLabel(self.content_frame, text="Record Medical Visit", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=(0, 20))
-        
-        form = ctk.CTkFrame(self.content_frame, corner_radius=15)
-        form.pack(fill="both", expand=True)
-
-        # Left Side: Info
-        left_p = ctk.CTkFrame(form, fg_color="transparent")
-        left_p.pack(side="left", fill="both", expand=True, padx=20)
-
-        ctk.CTkLabel(left_p, text="Patient ID").pack(anchor="w")
-        pid_e = ctk.CTkEntry(left_p, width=200)
-        pid_e.pack(pady=(0, 15), anchor="w")
-
-        ctk.CTkLabel(left_p, text="Vitals (BP, Temp, Weight, Pulse)").pack(anchor="w")
-        vitals_f = ctk.CTkFrame(left_p, fg_color="transparent")
-        vitals_f.pack(fill="x", pady=(0, 15))
-        bp_e = ctk.CTkEntry(vitals_f, placeholder_text="BP (120/80)", width=100)
-        bp_e.pack(side="left", padx=(0, 5))
-        temp_e = ctk.CTkEntry(vitals_f, placeholder_text="Temp (°C)", width=80)
-        temp_e.pack(side="left", padx=5)
-        weight_e = ctk.CTkEntry(vitals_f, placeholder_text="Wt (kg)", width=80)
-        weight_e.pack(side="left", padx=5)
-        pulse_e = ctk.CTkEntry(vitals_f, placeholder_text="Pulse", width=80)
-        pulse_e.pack(side="left", padx=5)
-
-        ctk.CTkLabel(left_p, text="Diagnosis").pack(anchor="w")
-        diag_e = ctk.CTkTextbox(left_p, height=80)
-        diag_e.pack(fill="x", pady=(0, 15))
-
-        # Right Side: Prescription
-        right_p = ctk.CTkFrame(form, fg_color="transparent")
-        right_p.pack(side="left", fill="both", expand=True, padx=20)
-
-        ctk.CTkLabel(right_p, text="Prescription / Treatment Plan").pack(anchor="w")
-        pres_e = ctk.CTkTextbox(right_p, height=200)
-        pres_e.pack(fill="x", pady=(0, 15))
-
-        def save_visit():
-            # Basic validation
-            p_id = pid_e.get()
-            if not p_id:
-                messagebox.showwarning("Input Error", "Patient ID is required")
-                return
-
-            # Safe conversion for vitals
-            try:
-                temp = float(temp_e.get()) if temp_e.get() else 0.0
-                weight = float(weight_e.get()) if weight_e.get() else 0.0
-                pulse = int(pulse_e.get()) if pulse_e.get() else 0
-            except ValueError:
-                messagebox.showwarning("Input Error", "Temperature, Weight, and Pulse must be numbers")
-                return
-
-            vid = self.visit_manager.add_visit(
-                p_id, date.today().isoformat(), diag_e.get("1.0", tk.END).strip(),
-                pres_e.get("1.0", tk.END).strip(), "Dr. Admin",
-                bp_e.get(), temp, weight, pulse
+def init_db():
+    if USE_MYSQL:
+        try:
+            conn = mysql.connector.connect(
+                host=MYSQL_CONFIG['host'],
+                user=MYSQL_CONFIG['user'],
+                password=MYSQL_CONFIG['password']
             )
-            if vid:
-                messagebox.showinfo("Success", "Visit Record Saved")
-                self.show_dashboard()
+            cursor = conn.cursor()
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {MYSQL_CONFIG['database']}")
+            conn.close()
+
+            conn = get_db()
+            if not conn: return
+            cursor = conn.cursor()
+
+            cursor.execute("DROP TABLE IF EXISTS sos_requests")
+            cursor.execute("DROP TABLE IF EXISTS blood_stock")
+            cursor.execute("DROP TABLE IF EXISTS hospitals")
+            cursor.execute("DROP TABLE IF EXISTS users")
+            cursor.execute('''CREATE TABLE users 
+                         (id INT AUTO_INCREMENT PRIMARY KEY, 
+                          username VARCHAR(50) UNIQUE, 
+                          password VARCHAR(100), 
+                          donor_temp_id VARCHAR(50), 
+                          full_name VARCHAR(100),
+                          phone VARCHAR(20),
+                          city VARCHAR(50),
+                          area VARCHAR(50),
+                          blood_type VARCHAR(10),
+                          donations_count INT DEFAULT 0,
+                          lives_saved INT DEFAULT 0,
+                          last_donation DATE,
+                          health_status VARCHAR(50),
+                          is_available TINYINT(1) DEFAULT 1,
+                          reg_date DATE,
+                          role VARCHAR(20) DEFAULT 'donor')''')
+
+            cursor.execute('''CREATE TABLE hospitals
+                         (id INT AUTO_INCREMENT PRIMARY KEY,
+                          hospital_name VARCHAR(120),
+                          username VARCHAR(50) UNIQUE,
+                          password VARCHAR(100),
+                          city VARCHAR(50),
+                          contact VARCHAR(20),
+                          hospital_id VARCHAR(30) UNIQUE,
+                          reg_date DATE)''')
+
+            cursor.execute('''CREATE TABLE blood_stock
+                         (id INT AUTO_INCREMENT PRIMARY KEY,
+                          hospital_id INT,
+                          blood_type VARCHAR(10),
+                          units INT DEFAULT 0,
+                          last_updated DATETIME,
+                          FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE)''')
+
+            cursor.execute('''CREATE TABLE sos_requests
+                         (id INT AUTO_INCREMENT PRIMARY KEY,
+                          requester_name VARCHAR(100),
+                          blood_type VARCHAR(10),
+                          units_needed INT,
+                          city VARCHAR(50),
+                          contact VARCHAR(20),
+                          notes VARCHAR(255),
+                          status VARCHAR(20),
+                          created_at DATETIME)''')
+
+            temp_id = "TEST-ID-888"
+            cursor.execute("""INSERT INTO users 
+                         (username, password, donor_temp_id, full_name, phone, city, area, blood_type, donations_count, lives_saved, last_donation, health_status, reg_date, role) 
+                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                         ("test id", "pass123", temp_id, "test id", "+91 9900112233", "Davangere", "Karnataka", "O Positive", 5, 15, "2026-03-10", "Healthy", "2026-01-15", "donor"))
+
+            cursor.execute("""INSERT INTO users (username, password, full_name, role) VALUES (%s, %s, %s, %s)""",
+                         ("admin", "REDACTED_PASSWORD", "System Administrator", "admin"))
+
+            cursor.execute("""INSERT INTO hospitals
+                         (hospital_name, username, password, city, contact, hospital_id, reg_date)
+                         VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                         ("City Care Hospital", "citycare", "hospital123", "Davangere", "+91 9876543210", "HSP-DC-001", "2026-01-22"))
+
+            cursor.execute("""INSERT INTO hospitals
+                         (hospital_name, username, password, city, contact, hospital_id, reg_date)
+                         VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                         ("Unity Blood Center", "unityblood", "hospital123", "Bengaluru", "+91 9012345678", "HSP-BLR-002", "2026-02-10"))
+
+            cursor.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (%s, %s, %s, %s)""", (1, "O+", 12, datetime.now()))
+            cursor.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (%s, %s, %s, %s)""", (1, "A+", 8, datetime.now()))
+            cursor.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (%s, %s, %s, %s)""", (2, "B+", 10, datetime.now()))
+
+            conn.commit()
+            conn.close()
+            print("Successfully initialized MySQL Database.")
+        except Error as e:
+            print(f"DATABASE ERROR: {e}")
+    else:
+        conn = get_db()
+        conn.execute("DROP TABLE IF EXISTS sos_requests")
+        conn.execute("DROP TABLE IF EXISTS blood_stock")
+        conn.execute("DROP TABLE IF EXISTS hospitals")
+        conn.execute("DROP TABLE IF EXISTS users")
+        conn.execute('''CREATE TABLE users 
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, 
+                      donor_temp_id TEXT, full_name TEXT, phone TEXT, city TEXT, area TEXT, 
+                      blood_type TEXT, donations_count INTEGER, lives_saved INTEGER, 
+                      last_donation TEXT, health_status TEXT, is_available INTEGER, reg_date TEXT, role TEXT)''')
+
+        conn.execute('''CREATE TABLE hospitals
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, hospital_name TEXT, username TEXT UNIQUE,
+                      password TEXT, city TEXT, contact TEXT, hospital_id TEXT UNIQUE, reg_date TEXT)''')
+
+        conn.execute('''CREATE TABLE blood_stock
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, hospital_id INTEGER,
+                      blood_type TEXT, units INTEGER, last_updated TEXT,
+                      FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE)''')
+
+        conn.execute('''CREATE TABLE sos_requests
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT, requester_name TEXT, blood_type TEXT,
+                      units_needed INTEGER, city TEXT, contact TEXT, notes TEXT, status TEXT, created_at TEXT)''')
+
+        temp_id = "TEST-ID-888"
+        conn.execute("INSERT INTO users (username, password, donor_temp_id, full_name, phone, city, area, blood_type, donations_count, lives_saved, last_donation, health_status, is_available, reg_date, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     ("test id", "pass123", temp_id, "test id", "+91 9900112233", "Davangere", "Karnataka", "O Positive", 5, 15, "2026-03-10", "Healthy", 1, "2026-01-15", "donor"))
+        conn.execute("INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)",
+                     ("admin", "REDACTED_PASSWORD", "System Administrator", "admin"))
+
+        conn.execute("""INSERT INTO hospitals (hospital_name, username, password, city, contact, hospital_id, reg_date) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     ("City Care Hospital", "citycare", "hospital123", "Davangere", "+91 9876543210", "HSP-DC-001", "2026-01-22"))
+        conn.execute("""INSERT INTO hospitals (hospital_name, username, password, city, contact, hospital_id, reg_date) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                     ("Unity Blood Center", "unityblood", "hospital123", "Bengaluru", "+91 9012345678", "HSP-BLR-002", "2026-02-10"))
+
+        conn.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (?, ?, ?, ?)""", (1, "O+", 12, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        conn.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (?, ?, ?, ?)""", (1, "A+", 8, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        conn.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated) VALUES (?, ?, ?, ?)""", (2, "B+", 10, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+        conn.commit()
+        conn.close()
+        print("Successfully initialized SQLite Database.")
+
+@app.context_processor
+def inject_user():
+    user = None
+    hospital = None
+    if 'user_id' in session:
+        conn = get_db()
+        if conn:
+            if USE_MYSQL:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
+                user = cursor.fetchone()
             else:
-                messagebox.showerror("Error", "Check Patient ID and Input")
+                user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+            conn.close()
+    if 'hospital_id' in session:
+        conn = get_db()
+        if conn:
+            if USE_MYSQL:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM hospitals WHERE id = %s", (session['hospital_id'],))
+                hospital = cursor.fetchone()
+            else:
+                hospital = conn.execute("SELECT * FROM hospitals WHERE id = ?", (session['hospital_id'],)).fetchone()
+            conn.close()
+    return dict(current_user=user, current_hospital=hospital)
 
-        ctk.CTkButton(form, text="Complete & Save Visit Record", command=save_visit, height=50, font=ctk.CTkFont(weight="bold")).pack(side="bottom", fill="x", padx=20, pady=20)
+@app.route('/')
+def index():
+    if 'user_id' in session: return redirect('/dashboard')
+    return redirect('/login')
 
-    def show_patient_dashboard(self):
-        for widget in self.content_frame.winfo_children(): widget.destroy()
-        user = self.auth.get_current_user()
-        patient = self.patient_manager.get_patient(user['patient_id'])
-        
-        ctk.CTkLabel(self.content_frame, text=f"Welcome, {patient['name']}", font=ctk.CTkFont(size=24, weight="bold")).pack(anchor="w", pady=(0, 20))
-        
-        info_frame = ctk.CTkFrame(self.content_frame)
-        info_frame.pack(fill="x", pady=10)
-        
-        details = f"Patient ID: {patient['patient_id']} | Contact: {patient['contact']} | Age: {patient['age']} | Gender: {patient['gender']}"
-        ctk.CTkLabel(info_frame, text=details, font=ctk.CTkFont(size=14)).pack(padx=20, pady=20)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
 
-        ctk.CTkLabel(self.content_frame, text="My Medical History", font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w", pady=(20, 10))
-        
-        history_scroll = ctk.CTkScrollableFrame(self.content_frame, height=400)
-        history_scroll.pack(fill="both", expand=True)
+        conn = get_db()
+        if conn:
+            if USE_MYSQL:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
+                user = cursor.fetchone()
+            else:
+                user = conn.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password)).fetchone()
+            conn.close()
 
-        history = self.visit_manager.get_patient_history(user['patient_id'])
-        for h in history:
-            card = ctk.CTkFrame(history_scroll, corner_radius=10)
-            card.pack(fill="x", pady=5, padx=5)
-            
-            top = ctk.CTkFrame(card, fg_color="gray90")
-            top.pack(fill="x")
-            ctk.CTkLabel(top, text=f"Date: {h['visit_date']} | Doctor: {h['doctor_name']}", font=ctk.CTkFont(weight="bold")).pack(side="left", padx=10)
-            
-            vitals = f"Vitals: BP {h['blood_pressure']} | Temp {h['temperature']}°C | Wt {h['weight']}kg | Pulse {h['pulse']}"
-            ctk.CTkLabel(card, text=vitals, text_color="#1a73e8").pack(anchor="w", padx=10, pady=5)
-            
-            ctk.CTkLabel(card, text=f"Diagnosis: {h['diagnosis']}", wraplength=700, justify="left").pack(anchor="w", padx=10)
-            ctk.CTkLabel(card, text=f"Prescription: {h['prescription']}", text_color="gray", wraplength=700, justify="left").pack(anchor="w", padx=10, pady=(0, 10))
+            if user:
+                session['user_id'] = user['id']
+                session['role'] = user['role']
+                if user['role'] == 'admin':
+                    return redirect('/admin')
+                return redirect('/dashboard')
+        flash("Login Failed. Check credentials or Database connection.")
+    return render_template('login.html')
 
-    def create_patient_login(self, patient):
-        # reuse previous logic but with ctk components
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Account Management")
-        dialog.geometry("350x400")
-        dialog.attributes("-topmost", True)
-        
-        ctk.CTkLabel(dialog, text=f"Account for: {patient['name']}", font=ctk.CTkFont(weight="bold")).pack(pady=20)
-        
-        u_entry = ctk.CTkEntry(dialog, placeholder_text="Username", width=250)
-        u_entry.pack(pady=10)
-        u_entry.insert(0, str(patient['name']).lower().replace(" ", ""))
-        
-        p_entry = ctk.CTkEntry(dialog, placeholder_text="Password", show="*", width=250)
-        p_entry.pack(pady=10)
-        
-        def save():
-            if self.account_manager.create_account(u_entry.get(), p_entry.get(), 'patient', patient['patient_id']):
-                messagebox.showinfo("Success", "Account Created")
-                dialog.destroy()
-            else: messagebox.showerror("Error", "Failed. Username taken?")
-            
-        ctk.CTkButton(dialog, text="Create Portal Access", command=save, width=250).pack(pady=30)
+@app.route('/hospital/login', methods=['GET', 'POST'])
+def hospital_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
 
-    def view_history(self, pid):
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("History Viewer")
-        dialog.geometry("600x600")
-        dialog.attributes("-topmost", True)
-        
-        scroll = ctk.CTkScrollableFrame(dialog)
-        scroll.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        history = self.visit_manager.get_patient_history(pid)
-        for h in history:
-            card = ctk.CTkFrame(scroll)
-            card.pack(fill="x", pady=5)
-            ctk.CTkLabel(card, text=f"{h['visit_date']} - {h['diagnosis']}", font=ctk.CTkFont(weight="bold")).pack(padx=10, pady=5)
-            ctk.CTkLabel(card, text=h['prescription'], text_color="gray").pack(padx=10, pady=5)
+        conn = get_db()
+        if conn:
+            if USE_MYSQL:
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM hospitals WHERE username = %s AND password = %s", (username, password))
+                hospital = cursor.fetchone()
+            else:
+                hospital = conn.execute("SELECT * FROM hospitals WHERE username = ? AND password = ?", (username, password)).fetchone()
+            conn.close()
 
-    def handle_delete_patient(self, pid):
-        if messagebox.askyesno("Confirm", "Are you sure you want to deactivate this patient record?"):
-            if self.patient_manager.delete_patient(pid):
-                self.refresh_patient_list()
+            if hospital:
+                session['hospital_id'] = hospital['id']
+                session['role'] = 'hospital'
+                return redirect('/hospital/dashboard')
+        flash("Hospital login failed. Check credentials.")
+    return render_template('hospital_login.html')
 
-if __name__ == "__main__":
-    app = HealthApp()
-    app.mainloop()
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username   = request.form['username']
+        password   = request.form['password']
+        full_name  = request.form['full_name']
+        phone      = "+91 " + request.form['phone']
+        city       = request.form['city']
+        area       = request.form['area']
+        blood_type = request.form['blood_type']
+
+        temp_id = "DNR-" + secrets.token_hex(4).upper()
+
+        conn = get_db()
+        if conn:
+            try:
+                if USE_MYSQL:
+                    cursor = conn.cursor()
+                    cursor.execute("""INSERT INTO users 
+                                 (username, password, donor_temp_id, full_name, phone, city, area, blood_type, reg_date, health_status, is_available) 
+                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                                 (username, password, temp_id, full_name, phone, city, area, blood_type,
+                                  datetime.now().strftime("%Y-%m-%d"), "Healthy", 1))
+                else:
+                    conn.execute("""INSERT INTO users 
+                                 (username, password, donor_temp_id, full_name, phone, city, area, blood_type, reg_date, health_status, is_available) 
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                 (username, password, temp_id, full_name, phone, city, area, blood_type,
+                                  datetime.now().strftime("%Y-%m-%d"), "Healthy", 1))
+                conn.commit()
+                conn.close()
+                flash(f"Welcome! Your Donor ID is {temp_id}")
+                return redirect('/login')
+            except Exception as e:
+                print(f"Reg Error: {e}")
+                flash("Error during registration. Username may already exist.")
+    return render_template('register.html')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session or session.get('role') != 'donor':
+        return redirect('/login')
+
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE id = %s", (session['user_id'],))
+        user = cursor.fetchone()
+    else:
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+    conn.close()
+
+    next_date = "Now"
+    last_don = user['last_donation']
+    if last_don:
+        if isinstance(last_don, str):
+            last_don = datetime.strptime(last_don, "%Y-%m-%d")
+        elig = last_don + timedelta(days=90)
+        comp = datetime.combine(elig, datetime.min.time()) if isinstance(elig, date) and not isinstance(elig, datetime) else elig
+        now  = datetime.now().date() if isinstance(elig, date) and not isinstance(elig, datetime) else datetime.now()
+        if elig > now:
+            next_date = elig.strftime("%d %b %Y")
+
+    return render_template('dashboard.html', user=user, next_date=next_date)
+
+@app.route('/sos', methods=['GET', 'POST'])
+def sos_request():
+    if request.method == 'POST':
+        name       = request.form['requester_name']
+        blood_type = request.form['blood_type']
+        units      = request.form['units_needed']
+        city       = request.form['city']
+        contact    = request.form['contact']
+        notes      = request.form.get('notes', '').strip()
+
+        conn = get_db()
+        if conn:
+            if USE_MYSQL:
+                cursor = conn.cursor()
+                cursor.execute("""INSERT INTO sos_requests
+                             (requester_name, blood_type, units_needed, city, contact, notes, status, created_at)
+                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                             (name, blood_type, units, city, contact, notes, "Open", datetime.now()))
+            else:
+                conn.execute("""INSERT INTO sos_requests
+                             (requester_name, blood_type, units_needed, city, contact, notes, status, created_at)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                             (name, blood_type, units, city, contact, notes, "Open",
+                              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            conn.commit()
+            conn.close()
+            flash("Emergency request submitted. Nearby hospitals are notified.")
+            return redirect('/sos')
+    return render_template('sos.html')
+
+@app.route('/sos_and_match', methods=['POST'])
+def sos_and_match():
+    name       = request.form['requester_name']
+    blood_type = request.form['blood_type']
+    units      = request.form['units_needed']
+    city       = request.form['city']
+    contact    = request.form['contact']
+    notes      = request.form.get('notes', '').strip()
+
+    conn = get_db()
+    if not conn:
+        flash("Database connection failed.")
+        return redirect('/sos')
+
+    # 1. Save the SOS request
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("""INSERT INTO sos_requests
+                         (requester_name, blood_type, units_needed, city, contact, notes, status, created_at)
+                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                         (name, blood_type, units, city, contact, notes, "Open", datetime.now()))
+    else:
+        conn.execute("""INSERT INTO sos_requests
+                         (requester_name, blood_type, units_needed, city, contact, notes, status, created_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                         (name, blood_type, units, city, contact, notes, "Open",
+                          datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+
+    # 2. Fetch all donors, hospitals, stock for matching
+    if USE_MYSQL:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE role = 'donor'")
+        donors = cursor.fetchall()
+        cursor.execute("SELECT * FROM hospitals")
+        hospitals = cursor.fetchall()
+        cursor.execute("SELECT * FROM blood_stock")
+        stock = cursor.fetchall()
+    else:
+        donors    = [dict(r) for r in conn.execute("SELECT * FROM users WHERE role = 'donor'").fetchall()]
+        hospitals = [dict(r) for r in conn.execute("SELECT * FROM hospitals").fetchall()]
+        stock     = [dict(r) for r in conn.execute("SELECT * FROM blood_stock").fetchall()]
+
+    conn.close()
+
+    # 3. Run matching engine
+    result = find_matches(blood_type, city, donors, hospitals, stock)
+    return render_template('match_results.html', result=result)
+
+@app.route('/match', methods=['GET', 'POST'])
+def match():
+    """Standalone match lookup — no SOS saved, just shows results."""
+    if request.method == 'GET':
+        return render_template('sos.html')
+
+    blood_type = request.form.get('blood_type', '').strip()
+    city       = request.form.get('city', '').strip()
+
+    if not blood_type or not city:
+        flash("Please fill in Blood Group and City.")
+        return redirect('/sos')
+
+    conn = get_db()
+    if not conn:
+        flash("Database connection failed.")
+        return redirect('/sos')
+
+    if USE_MYSQL:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE role = 'donor'")
+        donors = cursor.fetchall()
+        cursor.execute("SELECT * FROM hospitals")
+        hospitals = cursor.fetchall()
+        cursor.execute("SELECT * FROM blood_stock")
+        stock = cursor.fetchall()
+    else:
+        donors    = [dict(r) for r in conn.execute("SELECT * FROM users WHERE role = 'donor'").fetchall()]
+        hospitals = [dict(r) for r in conn.execute("SELECT * FROM hospitals").fetchall()]
+        stock     = [dict(r) for r in conn.execute("SELECT * FROM blood_stock").fetchall()]
+
+    conn.close()
+
+    result = find_matches(blood_type, city, donors, hospitals, stock)
+    return render_template('match_results.html', result=result)
+
+@app.route('/toggle_availability', methods=['POST'])
+def toggle_availability():
+    if 'user_id' not in session: return redirect('/login')
+    status    = request.form.get('status')
+    available = 1 if status == 'Healthy' else 0
+
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET health_status = %s, is_available = %s WHERE id = %s",
+                       (status, available, session['user_id']))
+    else:
+        conn.execute("UPDATE users SET health_status = ?, is_available = ? WHERE id = ?",
+                     (status, available, session['user_id']))
+    conn.commit()
+    conn.close()
+    return redirect('/dashboard')
+
+@app.route('/hospital/dashboard')
+def hospital_dashboard():
+    if session.get('role') != 'hospital': return redirect('/hospital/login')
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM hospitals WHERE id = %s", (session['hospital_id'],))
+        hospital = cursor.fetchone()
+        cursor.execute("SELECT * FROM blood_stock WHERE hospital_id = %s ORDER BY blood_type", (session['hospital_id'],))
+        stock = cursor.fetchall()
+        cursor.execute("SELECT * FROM sos_requests ORDER BY created_at DESC")
+        sos_list = cursor.fetchall()
+    else:
+        hospital = conn.execute("SELECT * FROM hospitals WHERE id = ?", (session['hospital_id'],)).fetchone()
+        stock    = conn.execute("SELECT * FROM blood_stock WHERE hospital_id = ? ORDER BY blood_type", (session['hospital_id'],)).fetchall()
+        sos_list = conn.execute("SELECT * FROM sos_requests ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return render_template('hospital_dashboard.html', hospital=hospital, stock=stock, sos_list=sos_list)
+
+@app.route('/hospital/stock/add', methods=['POST'])
+def hospital_add_stock():
+    if session.get('role') != 'hospital': return redirect('/hospital/login')
+    blood_type = request.form['blood_type']
+    units      = request.form['units']
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated)
+                       VALUES (%s, %s, %s, %s)""",
+                       (session['hospital_id'], blood_type, units, datetime.now()))
+    else:
+        conn.execute("""INSERT INTO blood_stock (hospital_id, blood_type, units, last_updated)
+                     VALUES (?, ?, ?, ?)""",
+                     (session['hospital_id'], blood_type, units, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+    flash("Blood stock added.")
+    return redirect('/hospital/dashboard')
+
+@app.route('/hospital/stock/update/<int:stock_id>', methods=['POST'])
+def hospital_update_stock(stock_id):
+    if session.get('role') != 'hospital': return redirect('/hospital/login')
+    units = request.form['units']
+    conn  = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("""UPDATE blood_stock SET units = %s, last_updated = %s
+                       WHERE id = %s AND hospital_id = %s""",
+                       (units, datetime.now(), stock_id, session['hospital_id']))
+    else:
+        conn.execute("""UPDATE blood_stock SET units = ?, last_updated = ?
+                     WHERE id = ? AND hospital_id = ?""",
+                     (units, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), stock_id, session['hospital_id']))
+    conn.commit()
+    conn.close()
+    flash("Stock updated.")
+    return redirect('/hospital/dashboard')
+
+@app.route('/hospital/stock/delete/<int:stock_id>', methods=['POST'])
+def hospital_delete_stock(stock_id):
+    if session.get('role') != 'hospital': return redirect('/hospital/login')
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM blood_stock WHERE id = %s AND hospital_id = %s",
+                       (stock_id, session['hospital_id']))
+    else:
+        conn.execute("DELETE FROM blood_stock WHERE id = ? AND hospital_id = ?",
+                     (stock_id, session['hospital_id']))
+    conn.commit()
+    conn.close()
+    flash("Stock removed.")
+    return redirect('/hospital/dashboard')
+
+@app.route('/hospital/sos/delete/<int:req_id>', methods=['POST'])
+def hospital_delete_sos(req_id):
+    if session.get('role') != 'hospital': return redirect('/hospital/login')
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sos_requests WHERE id = %s", (req_id,))
+    else:
+        conn.execute("DELETE FROM sos_requests WHERE id = ?", (req_id,))
+    conn.commit()
+    conn.close()
+    flash("SOS request cleared.")
+    return redirect('/hospital/dashboard')
+
+@app.route('/admin')
+def admin_panel():
+    if session.get('role') != 'admin': return redirect('/login')
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE role = 'donor'")
+        donors = cursor.fetchall()
+        cursor.execute("SELECT * FROM sos_requests ORDER BY created_at DESC")
+        sos_list = cursor.fetchall()
+    else:
+        donors   = conn.execute("SELECT * FROM users WHERE role = 'donor'").fetchall()
+        sos_list = conn.execute("SELECT * FROM sos_requests ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return render_template('admin_dashboard.html', donors=donors, sos_list=sos_list)
+
+@app.route('/admin/update_donor/<int:donor_id>', methods=['POST'])
+def admin_update_donor(donor_id):
+    if session.get('role') != 'admin': return redirect('/login')
+    lives     = request.form.get('lives_saved')
+    donations = request.form.get('donations_count')
+    status    = request.form.get('health_status')
+
+    conn = get_db()
+    if USE_MYSQL:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET lives_saved = %s, donations_count = %s, health_status = %s WHERE id = %s",
+                       (lives, donations, status, donor_id))
+    else:
+        conn.execute("UPDATE users SET lives_saved = ?, donations_count = ?, health_status = ? WHERE id = ?",
+                     (lives, donations, status, donor_id))
+    conn.commit()
+    conn.close()
+    flash("Donor records updated")
+    return redirect('/admin')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/login')
+
+if __name__ == '__main__':
+    init_db()
+    port = 5001 if "mysql" in os.path.dirname(os.path.abspath(__file__)).lower() else 5002
+    app.run(debug=True, port=port)

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Emergency - LifeSaver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 640px;">
+            <div class="auth-header">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <h2>Emergency Blood SOS</h2>
+                <p style="color: var(--gray); margin-top: 5px;">Submit urgent blood requirements for immediate action.</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success" style="text-align: center;">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Requester Name</label>
+                        <input type="text" name="requester_name" placeholder="Full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number</label>
+                        <input type="text" name="contact" placeholder="+91 9XXXXXXXXX" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select name="blood_type" required>
+                            <option value="">Select...</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Units Needed</label>
+                        <input type="number" name="units_needed" min="1" placeholder="Units" required>
+                    </div>
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" name="city" placeholder="City" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Emergency Notes</label>
+                    <input type="text" name="notes" placeholder="Location, hospital, urgency details">
+                </div>
+
+                <button type="submit" class="btn-primary">Send SOS Request</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                Hospital staff? <a href="/hospital/login" style="color: var(--primary); font-weight: 700; text-decoration: none;">Open Hospital Dashboard</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

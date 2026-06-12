@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - LifeSaver Network</title>
+    <meta http-equiv="refresh" content="5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .donor-row:hover { background: #fff5f5; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .badge-healthy { background: #d1fae5; color: #065f46; }
+        .badge-unhealthy { background: #fee2e2; color: #dc2626; }
+        .sos-banner {
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 2px solid #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+        }
+        .sos-flash {
+            animation: flashAlert 1s infinite;
+        }
+        @keyframes flashAlert {
+            0% { background: #ffffff; color: #dc2626; }
+            50% { background: #dc2626; color: #ffffff; }
+            100% { background: #ffffff; color: #dc2626; }
+        }
+    </style>
+</head>
+<body style="background: #f1f5f9;">
+    <header class="top-nav">
+        <div class="brand">
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>LifeSaver Admin Control</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="text-align: right;">
+                <div style="font-weight: 700;">{{ current_user.full_name }}</div>
+                <div style="font-size: 0.75rem; color: var(--gray);">Admin ID: ADM-0001</div>
+            </div>
+            <a href="/logout" style="color: var(--primary); font-size: 1.2rem;"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="hero-section" style="background: var(--secondary); padding: 1.5rem;">
+            <div>
+                <h1 style="font-size: 1.8rem; margin-bottom: 0.2rem;">Donor Management</h1>
+                <p style="opacity: 0.8; font-size: 0.9rem;">Review and update donor statistics across the network.</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px;">
+                    <span style="font-size: 0.8rem;">TOTAL DONORS</span>
+                    <div style="font-size: 1.4rem; font-weight: 800;">{{ donors|length }}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);">
+                    <span style="font-size: 0.8rem;">OPEN SOS</span>
+                    <div style="font-size: 1.4rem; font-weight: 800;">{{ sos_list|length }}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if sos_list|length > 0 %}
+            <div class="sos-banner sos-flash">
+                <div><i class="fa-solid fa-triangle-exclamation"></i> SOS ALERT ACTIVE - {{ sos_list|length }} REQUEST(S)</div>
+                <div style="font-size: 0.8rem; font-weight: 700;">AUTO REFRESH 5s</div>
+            </div>
+        {% endif %}
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 0.8rem;">Emergency SOS Alerts</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+                {% for req in sos_list %}
+                <div style="border: 1px solid #fee2e2; border-radius: 14px; padding: 12px; background: #fffafa;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-weight: 800;">{{ req.requester_name }}</div>
+                        <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 700;">
+                            {{ req.blood_type }} | {{ req.units_needed }}U
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--gray); margin-top: 4px;">{{ req.city }} · {{ req.contact }}</div>
+                    <div style="font-size: 0.85rem; margin-top: 6px;">{{ req.notes }}</div>
+                    <div style="font-size: 0.75rem; color: var(--gray); margin-top: 8px;">{{ req.created_at }}</div>
+                </div>
+                {% else %}
+                <div style="color: var(--gray); font-size: 0.85rem;">No active SOS alerts.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card" style="padding: 1.5rem; overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                <thead style="background: #f8fafc; border-bottom: 2px solid #eee;">
+                    <tr>
+                        <th style="padding: 15px; text-align: left;">Donor Details</th>
+                        <th style="padding: 15px; text-align: left;">Location</th>
+                        <th style="padding: 15px; text-align: center;">Blood</th>
+                        <th style="padding: 15px; text-align: center;">Availability</th>
+                        <th style="padding: 15px; text-align: left;">Update Stats</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for donor in donors %}
+                    <tr class="donor-row" style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 15px;">
+                            <div style="font-weight: 700;">{{ donor.full_name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--gray); font-family: monospace;">{{ donor.donor_temp_id }} | {{ donor.phone }}</div>
+                        </td>
+                        <td style="padding: 15px;">
+                            <div style="font-size: 0.9rem;">{{ donor.area }}</div>
+                            <div style="font-size: 0.75rem; color: var(--gray);">{{ donor.city }}</div>
+                        </td>
+                        <td style="padding: 15px; text-align: center;">
+                            <span style="color: var(--primary); font-weight: 800;">{{ donor.blood_type }}</span>
+                        </td>
+                        <td style="padding: 15px; text-align: center;">
+                            <span class="badge {% if donor.health_status == 'Healthy' %}badge-healthy{% else %}badge-unhealthy{% endif %}">
+                                {{ donor.health_status }}
+                            </span>
+                        </td>
+                        <td style="padding: 15px;">
+                            <form action="/admin/update_donor/{{ donor.id }}" method="POST" style="display: flex; gap: 5px; align-items: center;">
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-size: 0.6rem; color: var(--gray);">LIVES / DONATIONS</span>
+                                    <div style="display: flex; gap: 2px;">
+                                        <input type="number" name="lives_saved" value="{{ donor.lives_saved }}" style="width: 50px; padding: 4px; font-size: 0.8rem; border-radius: 4px;">
+                                        <input type="number" name="donations_count" value="{{ donor.donations_count }}" style="width: 50px; padding: 4px; font-size: 0.8rem; border-radius: 4px;">
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-size: 0.6rem; color: var(--gray);">STATUS</span>
+                                    <select name="health_status" style="padding: 4px; font-size: 0.8rem; border-radius: 4px;">
+                                        <option value="Healthy" {% if donor.health_status == 'Healthy' %}selected{% endif %}>Healthy</option>
+                                        <option value="Unhealthy" {% if donor.health_status == 'Unhealthy' %}selected{% endif %}>Unhealthy</option>
+                                    </select>
+                                </div>
+                                <button type="submit" style="background: var(--primary); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;" title="Save Changes">
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

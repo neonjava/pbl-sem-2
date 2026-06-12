@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Dashboard - LifeSaver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .stock-table td, .stock-table th { padding: 12px; text-align: left; }
+        .stock-table th { font-size: 0.8rem; color: var(--gray); text-transform: uppercase; }
+        .mini-btn { padding: 6px 10px; font-size: 0.75rem; border-radius: 8px; border: none; cursor: pointer; }
+        .mini-btn.primary { background: var(--primary); color: #fff; }
+        .mini-btn.muted { background: #e2e8f0; color: #334155; }
+        .chip { padding: 4px 10px; border-radius: 999px; background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <header class="top-nav">
+        <div class="brand">
+            <i class="fa-solid fa-hospital"></i>
+            <span>Hospital Control Center</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="text-align: right;">
+                <div style="font-weight: 700;">{{ hospital.hospital_name }}</div>
+                <div style="font-size: 0.75rem; color: var(--gray);">{{ hospital.city }} | {{ hospital.hospital_id }}</div>
+            </div>
+            <a href="/logout" style="color: var(--primary); font-size: 1.2rem;" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="hero-section" style="background: var(--secondary); padding: 1.6rem;">
+            <div>
+                <h1 style="font-size: 1.8rem; margin-bottom: 0.2rem;">Blood Stock & SOS Tracker</h1>
+                <p style="opacity: 0.8; font-size: 0.9rem;">Update live blood availability and respond to emergency requests.</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px;">
+                <span style="font-size: 0.8rem;">OPEN SOS</span>
+                <div style="font-size: 1.4rem; font-weight: 800;">{{ sos_list|length }}</div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-success">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fee2e2; color: #dc2626;">
+                    <i class="fa-solid fa-droplet"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Stock Types</div>
+                    <div style="font-size: 1.8rem; font-weight: 800;">{{ stock|length }}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e1f5fe; color: #0288d1;">
+                    <i class="fa-solid fa-phone-volume"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Contact</div>
+                    <div style="font-size: 1rem; font-weight: 800;">{{ hospital.contact }}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Hospital ID</div>
+                    <div style="font-size: 1.2rem; font-weight: 800;">{{ hospital.hospital_id }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom: 1rem;">Live Blood Stock</h3>
+                <form action="/hospital/stock/add" method="POST" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 1rem;">
+                    <select name="blood_type" required>
+                        <option value="">Blood Group</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                    </select>
+                    <input type="number" name="units" min="0" placeholder="Units" required>
+                    <button class="mini-btn primary" type="submit"><i class="fa-solid fa-plus"></i> Add</button>
+                </form>
+
+                <table class="stock-table" style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock %}
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="font-weight: 700; color: var(--primary);">{{ item.blood_type }}</td>
+                            <td>
+                                <form action="/hospital/stock/update/{{ item.id }}" method="POST" style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="number" name="units" min="0" value="{{ item.units }}" style="width: 80px; padding: 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <button class="mini-btn primary" type="submit"><i class="fa-solid fa-pen"></i></button>
+                                </form>
+                            </td>
+                            <td style="font-size: 0.8rem; color: var(--gray);">{{ item.last_updated }}</td>
+                            <td>
+                                <form action="/hospital/stock/delete/{{ item.id }}" method="POST">
+                                    <button class="mini-btn muted" type="submit"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="padding: 20px; text-align: center; color: var(--gray);">No stock records added yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card" style="padding: 1.5rem;">
+                <h3 style="margin-bottom: 1rem;">Emergency SOS Requests</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 520px; overflow-y: auto;">
+                    {% for req in sos_list %}
+                    <div style="border: 1px solid #fee2e2; border-radius: 16px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-weight: 800;">{{ req.requester_name }}</div>
+                            <span class="chip">{{ req.blood_type }} | {{ req.units_needed }}U</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--gray); margin-top: 4px;">{{ req.city }} · {{ req.contact }}</div>
+                        <div style="font-size: 0.85rem; margin-top: 6px;">{{ req.notes }}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                            <div style="font-size: 0.75rem; color: var(--gray);">Created: {{ req.created_at }}</div>
+                            <form action="/hospital/sos/delete/{{ req.id }}" method="POST">
+                                <button class="mini-btn muted" type="submit"><i class="fa-solid fa-check"></i> Resolve</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div style="color: var(--gray); font-size: 0.85rem;">No SOS requests right now.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

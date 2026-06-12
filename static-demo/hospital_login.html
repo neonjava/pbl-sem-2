@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Login - LifeSaver</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fa-solid fa-hospital"></i>
+                <h2>Hospital Access</h2>
+                <p style="color: var(--gray); margin-top: 5px;">Manage your blood stock and SOS alerts.</p>
+            </div>
+
+            <div class="alert" style="background: #fee2e2; color: #dc2626; text-align: center; display: none; margin-bottom: 1rem;" id="loginAlert"></div>
+
+            <form onsubmit="return handleHospitalLogin(event);">
+                <div class="form-group">
+                    <label>Hospital Username</label>
+                    <input type="text" id="username" placeholder="e.g. citycare" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; border: none; cursor: pointer;">Login to Hospital Dashboard</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                Need donor access? <a href="login.html" style="color: var(--primary); font-weight: 700; text-decoration: none;">Go to Donor Login</a>
+            </div>
+            <div style="text-align: center; margin-top: 0.8rem; font-size: 0.85rem;">
+                <a href="index.html" style="color: var(--secondary); font-weight: 700; text-decoration: none;">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/db.js"></script>
+    <script>
+        function handleHospitalLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            const alertBox = document.getElementById("loginAlert");
+
+            const res = loginHospital(user, pass);
+            if (res.success) {
+                window.location.href = "hospital_dashboard.html";
+            } else {
+                alertBox.textContent = res.message;
+                alertBox.style.display = "block";
+            }
+            return false;
+        }
+    </script>
+</body>
+</html>

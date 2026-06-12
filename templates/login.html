@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - LifeSaver Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <h2>Donor Login</h2>
+                <p style="color: var(--gray); margin-top: 5px;">Access your donation insights.</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert" style="background: #fee2e2; color: #dc2626; text-align: center;">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In to Dashboard</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                New to the community? <a href="/register" style="color: var(--primary); font-weight: 700; text-decoration: none;">Register Now</a>
+            </div>
+            <div style="text-align: center; margin-top: 0.8rem; font-size: 0.85rem;">
+                <a href="/sos" style="color: var(--primary); font-weight: 700; text-decoration: none;">Emergency SOS</a>
+                <span style="color: var(--gray); padding: 0 6px;">|</span>
+                <a href="/hospital/login" style="color: var(--secondary); font-weight: 700; text-decoration: none;">Hospital Login</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Results – BloodBridge</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --match-green:  #0d9488;
+            --match-amber:  #d97706;
+            --match-red:    #dc2626;
+            --surface:      #f8fafc;
+            --card-radius:  18px;
+        }
+
+        /* ── Page chrome ───────────────────────────────────────────── */
+        body { background: #f1f5f9; }
+
+        .page-wrap {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem 4rem;
+        }
+
+        /* ── Ref-ID hero bar ───────────────────────────────────────── */
+        .ref-bar {
+            background: var(--secondary);
+            color: #fff;
+            border-radius: var(--card-radius);
+            padding: 1.4rem 1.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .ref-bar .label {
+            font-size: 0.72rem;
+            letter-spacing: 1.5px;
+            opacity: 0.65;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        .ref-code {
+            font-size: 1.6rem;
+            font-weight: 800;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            color: #f87171;
+        }
+        .ref-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 999px;
+            margin: 3px;
+        }
+
+        /* ── Section header ────────────────────────────────────────── */
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 2rem 0 1rem;
+        }
+        .section-head .icon-bubble {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .section-head h2 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--secondary);
+        }
+        .section-head .count-chip {
+            margin-left: auto;
+            background: #e2e8f0;
+            color: #475569;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 999px;
+        }
+
+        /* ── Donor card ────────────────────────────────────────────── */
+        .donor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 1rem;
+        }
+        .donor-card {
+            background: #fff;
+            border-radius: var(--card-radius);
+            padding: 1.2rem 1.4rem;
+            border: 1.5px solid #e2e8f0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .donor-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(230,57,70,0.12);
+        }
+        .donor-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background: var(--primary);
+            border-radius: 4px 0 0 4px;
+        }
+        .donor-blood-badge {
+            position: absolute;
+            top: 12px; right: 14px;
+            background: #fee2e2;
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 0.9rem;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+        .donor-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--secondary);
+            margin-bottom: 2px;
+            padding-right: 60px;
+        }
+        .donor-id {
+            font-size: 0.7rem;
+            color: var(--gray);
+            font-family: monospace;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .donor-meta {
+            font-size: 0.8rem;
+            color: #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .donor-meta i { width: 16px; color: var(--gray); }
+        .dist-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+            margin-top: 10px;
+        }
+        .dist-pill.near   { background: #d1fae5; color: #065f46; }
+        .dist-pill.medium { background: #fef3c7; color: #92400e; }
+        .dist-pill.far    { background: #fee2e2; color: #991b1b; }
+        .dist-pill.unknown{ background: #e2e8f0; color: #475569; }
+
+        /* ── Hospital card ─────────────────────────────────────────── */
+        .hosp-list { display: flex; flex-direction: column; gap: 1rem; }
+        .hosp-card {
+            background: #fff;
+            border-radius: var(--card-radius);
+            padding: 1.2rem 1.4rem;
+            border: 1.5px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.8rem 1.5rem;
+            align-items: start;
+            transition: border-color 0.2s;
+        }
+        .hosp-card:hover { border-color: var(--secondary); }
+        .hosp-card.top-pick {
+            border-color: var(--match-green);
+            background: #f0fdfa;
+        }
+        .hosp-card.top-pick::after {
+            content: '★ Best Match';
+            grid-column: 1 / -1;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--match-green);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .hosp-name {
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--secondary);
+        }
+        .hosp-sub {
+            font-size: 0.78rem;
+            color: var(--gray);
+            margin-top: 2px;
+        }
+        .stock-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .stock-chip {
+            background: #dcfce7;
+            color: #166534;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+        .no-stock-chip {
+            background: #f1f5f9;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+        .hosp-right { text-align: right; }
+        .hosp-id-code {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--gray);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* ── Empty state ───────────────────────────────────────────── */
+        .empty-state {
+            background: #fff;
+            border-radius: var(--card-radius);
+            padding: 2.5rem;
+            text-align: center;
+            border: 1.5px dashed #cbd5e1;
+            color: var(--gray);
+        }
+        .empty-state i { font-size: 2rem; margin-bottom: 0.8rem; opacity: 0.4; }
+
+        /* ── Action bar ────────────────────────────────────────────── */
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 2.5rem;
+        }
+        .btn-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.65rem 1.2rem;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            background: #fff;
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .btn-outline:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        @media (max-width: 600px) {
+            .ref-bar { flex-direction: column; }
+            .hosp-card { grid-template-columns: 1fr; }
+            .hosp-right { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-nav">
+        <div class="brand">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <span>BloodBridge Match</span>
+        </div>
+        <a href="/sos" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-left"></i> New SOS
+        </a>
+    </header>
+
+    <div class="page-wrap">
+
+        <!-- ── Reference bar ──────────────────────────────────────── -->
+        <div class="ref-bar">
+            <div>
+                <div class="label">Match Reference</div>
+                <div class="ref-code">{{ result.ref_id }}</div>
+            </div>
+            <div class="ref-meta">
+                <span><i class="fa-solid fa-droplet"></i> {{ result.requested_blood_type }}</span>
+                <span><i class="fa-solid fa-location-dot"></i> {{ result.requester_city }}</span>
+                <span><i class="fa-solid fa-clock"></i> {{ result.match_time }}</span>
+                <span><i class="fa-solid fa-ruler"></i> ≤ {{ result.radius_used_donors }} km search</span>
+            </div>
+        </div>
+
+        <!-- ── Donor section ──────────────────────────────────────── -->
+        <div class="section-head">
+            <div class="icon-bubble" style="background: #fee2e2; color: #dc2626;">
+                <i class="fa-solid fa-user-group"></i>
+            </div>
+            <h2>Compatible Donors Nearby</h2>
+            <span class="count-chip">{{ result.matched_donors | length }} found</span>
+        </div>
+
+        {% if result.matched_donors %}
+        <div class="donor-grid">
+            {% for donor in result.matched_donors %}
+            {% set dist = donor.distance_km %}
+            <div class="donor-card">
+                <div class="donor-blood-badge">{{ donor.blood_type }}</div>
+                <div class="donor-name">{{ donor.full_name }}</div>
+                <div class="donor-id">{{ donor.donor_temp_id }}</div>
+                <div class="donor-meta">
+                    <div><i class="fa-solid fa-phone"></i> {{ donor.phone or "—" }}</div>
+                    <div><i class="fa-solid fa-location-dot"></i> {{ donor.area or "" }}{% if donor.area and donor.city %}, {% endif %}{{ donor.city or "—" }}</div>
+                    {% if donor.donations_count %}
+                    <div><i class="fa-solid fa-vial"></i> {{ donor.donations_count }} donation{{ 's' if donor.donations_count != 1 }}</div>
+                    {% endif %}
+                </div>
+                {% if dist is not none %}
+                    {% if dist <= 25 %}
+                        <span class="dist-pill near"><i class="fa-solid fa-circle-check"></i> {{ dist }} km away</span>
+                    {% elif dist <= 55 %}
+                        <span class="dist-pill medium"><i class="fa-solid fa-location-arrow"></i> {{ dist }} km away</span>
+                    {% else %}
+                        <span class="dist-pill far"><i class="fa-solid fa-road"></i> {{ dist }} km away</span>
+                    {% endif %}
+                {% else %}
+                    <span class="dist-pill unknown"><i class="fa-solid fa-question"></i> Distance unknown</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div><i class="fa-solid fa-users-slash"></i></div>
+            <div style="font-weight: 700; margin-bottom: 6px;">No eligible donors found within {{ result.radius_used_donors }} km</div>
+            <div style="font-size: 0.85rem;">Try submitting a broader SOS or contact hospitals directly below.</div>
+        </div>
+        {% endif %}
+
+        <!-- ── Hospital section ───────────────────────────────────── -->
+        <div class="section-head">
+            <div class="icon-bubble" style="background: #dbeafe; color: #1d4ed8;">
+                <i class="fa-solid fa-hospital"></i>
+            </div>
+            <h2>Nearest Hospitals</h2>
+            <span class="count-chip">{{ result.matched_hospitals | length }} found</span>
+        </div>
+
+        {% if result.matched_hospitals %}
+        <div class="hosp-list">
+            {% for hosp in result.matched_hospitals %}
+            <div class="hosp-card {% if loop.first and hosp.has_stock %}top-pick{% endif %}">
+                <div>
+                    <div class="hosp-name">{{ hosp.hospital_name }}</div>
+                    <div class="hosp-sub">
+                        <i class="fa-solid fa-location-dot" style="width:14px;"></i>
+                        {{ hosp.city }}
+                        {% if hosp.distance_km is not none %}
+                         · <strong>{{ hosp.distance_km }} km</strong>
+                        {% endif %}
+                    </div>
+                    <div class="hosp-sub" style="margin-top: 4px;">
+                        <i class="fa-solid fa-phone" style="width:14px;"></i> {{ hosp.contact }}
+                    </div>
+
+                    <div class="stock-chips">
+                        {% if hosp.relevant_stock %}
+                            {% for s in hosp.relevant_stock %}
+                            <span class="stock-chip">
+                                <i class="fa-solid fa-droplet"></i>
+                                {{ s.blood_type }} · {{ s.units }} units
+                            </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="no-stock-chip">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                No {{ result.requested_blood_type }} stock listed
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="hosp-right">
+                    <span class="hosp-id-code">{{ hosp.hospital_id }}</span>
+                    {% if hosp.distance_km is not none %}
+                        {% if hosp.distance_km <= 30 %}
+                            <span class="dist-pill near">Very Close</span>
+                        {% elif hosp.distance_km <= 70 %}
+                            <span class="dist-pill medium">Nearby</span>
+                        {% else %}
+                            <span class="dist-pill far">Farther Away</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div><i class="fa-solid fa-hospital-slash"></i></div>
+            <div style="font-weight: 700; margin-bottom: 6px;">No hospitals found within {{ result.radius_used_hospitals }} km</div>
+            <div style="font-size: 0.85rem;">Contact your district blood bank directly.</div>
+        </div>
+        {% endif %}
+
+        <!-- ── Action bar ─────────────────────────────────────────── -->
+        <div class="action-bar">
+            <a href="/sos" class="btn-outline">
+                <i class="fa-solid fa-triangle-exclamation"></i> New SOS
+            </a>
+            <a href="/" class="btn-outline" style="border-color: var(--secondary); color: var(--secondary);">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            <button onclick="window.print();" class="btn-outline" style="border-color: #475569; color: #475569;">
+                <i class="fa-solid fa-print"></i> Print / Save
+            </button>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 1rem 1.2rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; font-size: 0.8rem; color: #92400e;">
+            <i class="fa-solid fa-circle-info"></i>
+            <strong>Reference ID {{ result.ref_id }}</strong> — Share this ID with hospital staff when you arrive. Donor contact details shown to hospital coordinators only. In life-threatening emergencies call <strong>108</strong>.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the Network - LifeSaver</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 600px;">
+            <div class="auth-header">
+                <i class="fa-solid fa-droplet"></i>
+                <h2>Become a Lifesaver</h2>
+                <p style="color: var(--gray); margin-top: 5px;">Register your details to start saving lives.</p>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success" style="text-align: center;">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Display Username</label>
+                        <input type="text" name="username" placeholder="e.g. donor_01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Password</label>
+                        <input type="password" name="password" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Legal Name</label>
+                    <input type="text" name="full_name" placeholder="As per ID proofs" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <div style="display: flex; gap: 5px;">
+                            <span style="padding: 0.8rem; background: #eee; border-radius: 12px; font-weight: 700; color: #555;">+91</span>
+                            <input type="text" name="phone" placeholder="10 Digit Number" pattern="[0-9]{10}" maxlength="10" title="Please enter exactly 10 digits" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select name="blood_type" required>
+                            <option value="">Select...</option>
+                            <option value="A+">A Positive (A+)</option>
+                            <option value="A-">A Negative (A-)</option>
+                            <option value="B+">B Positive (B+)</option>
+                            <option value="B-">B Negative (B-)</option>
+                            <option value="O+">O Positive (O+)</option>
+                            <option value="O-">O Negative (O-)</option>
+                            <option value="AB+">AB Positive (AB+)</option>
+                            <option value="AB-">AB Negative (AB-)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" name="city" placeholder="e.g. Mumbai" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Area / Locality</label>
+                        <input type="text" name="area" placeholder="e.g. Bandra" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">Complete Registration</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                Already a member? <a href="/login" style="color: var(--primary); font-weight: 700; text-decoration: none;">Log In here</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

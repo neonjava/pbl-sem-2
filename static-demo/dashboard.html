@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard - LifeSaver</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="top-nav">
+        <div class="brand">
+            <i class="fa-solid fa-droplet"></i>
+            <span>LifeSaver Registry</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="text-align: right;">
+                <div style="font-weight: 700; font-size: 0.9rem;" id="headerName">--</div>
+                <div style="font-size: 0.75rem; color: var(--gray);" id="headerLocation">--</div>
+            </div>
+            <a href="#" onclick="handleLogout(event);" style="color: var(--primary); font-size: 1.2rem;" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="hero-section">
+            <div>
+                <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;" id="welcomeHero">Hello, Hero!</h1>
+                <p style="opacity: 0.9;">Your commitment to the community is making a real difference.</p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Donor ID</div>
+                <div style="font-size: 1.5rem; font-weight: 800; font-family: monospace;" id="heroDonorId">--</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #fee2e2; color: #dc2626;">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Lives Saved</div>
+                    <div style="font-size: 1.8rem; font-weight: 800;" id="statLivesSaved">0</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e1f5fe; color: #0288d1;">
+                    <i class="fa-solid fa-vial-circle-check"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Blood Group</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #0288d1;" id="statBloodGroup">--</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e8f5e9; color: #2e7d32;">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <div style="color: var(--gray); font-size: 0.85rem; font-weight: 600;">Next Eligibility</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: #2e7d32;" id="statEligibility">Now</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="card">
+                <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i>
+                    Recent Donation Activity
+                </h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #eee; color: var(--gray); font-size: 0.85rem;">
+                            <th style="text-align: left; padding: 10px 0;">Date</th>
+                            <th style="text-align: left; padding: 10px 0;">Location</th>
+                            <th style="text-align: left; padding: 10px 0;">Units</th>
+                            <th style="text-align: right; padding: 10px 0;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="donationHistoryBody">
+                        <tr>
+                            <td colspan="4" style="padding: 15px 0; text-align: center; color: var(--gray);">No recent activities.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card" style="background: #fffafa; border: 1px solid #fee2e2;">
+                <h3 style="margin-bottom: 1.2rem; color: var(--primary);">Availability Status</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                    <button class="btn-primary" onclick="setStatus('Healthy');" style="margin:0; padding: 0.5rem; background: #2a9d8f; border: none; cursor: pointer;">Healthy</button>
+                    <button class="btn-primary" onclick="setStatus('Unhealthy');" style="margin:0; padding: 0.5rem; background: #dc2626; border: none; cursor: pointer;">Non-Healthy</button>
+                </div>
+
+                <div style="font-size: 0.7rem; color: var(--gray); margin-bottom: 5px;">CURRENT STATUS</div>
+                <div id="currentStatusText" style="color: #2a9d8f; font-weight: 800; font-size: 1.1rem; margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-circle-check"></i> Healthy
+                </div>
+
+                <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1rem;">Contact Details</h3>
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase;">Phone Number</div>
+                    <div style="font-weight: 700;" id="contactPhone">--</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase;">Region / City</div>
+                    <div style="font-weight: 700;" id="contactLocation">--</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; color: var(--gray); text-transform: uppercase;">Fitness Certificate</div>
+                    <div id="certContainer" style="margin-top: 5px;">
+                        <span style="font-size: 0.85rem; color: var(--gray);">No certificate uploaded</span>
+                    </div>
+                </div>
+
+                <a href="index.html" class="btn-primary" style="display:block; text-align:center; text-decoration:none; margin-top: 1.5rem; font-size: 0.8rem; padding: 0.6rem;">Back to Home</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/db.js"></script>
+    <script>
+        const user = getCurrentUser();
+        if (!user || user.role !== "donor") {
+            window.location.href = "login.html";
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            // Render basic details
+            document.getElementById("headerName").textContent = user.full_name;
+            document.getElementById("headerLocation").textContent = `${user.area}, ${user.city}`;
+            document.getElementById("welcomeHero").textContent = `Hello, ${user.full_name}!`;
+            document.getElementById("heroDonorId").textContent = user.donor_temp_id;
+            document.getElementById("statLivesSaved").textContent = user.lives_saved;
+            document.getElementById("statBloodGroup").textContent = user.blood_type;
+            
+            // Render contact details
+            document.getElementById("contactPhone").textContent = user.phone || "--";
+            document.getElementById("contactLocation").textContent = `${user.area}, ${user.city}`;
+
+            // Render certificate
+            const certContainer = document.getElementById("certContainer");
+            if (user.certificate) {
+                certContainer.innerHTML = `
+                    <a href="${user.certificate}" download="certificate_${user.donor_temp_id}.png" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-file-arrow-down"></i> Download Certificate
+                    </a>
+                `;
+            }
+
+            // Render next eligibility date
+            const eligDate = getNextEligibilityDate(user.last_donation);
+            document.getElementById("statEligibility").textContent = eligDate;
+
+            // Render status
+            const statusEl = document.getElementById("currentStatusText");
+            if (user.health_status === "Healthy") {
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> Healthy`;
+                statusEl.style.color = "#2a9d8f";
+            } else {
+                statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Unhealthy`;
+                statusEl.style.color = "#dc2626";
+            }
+
+            // Render donation history
+            const historyBody = document.getElementById("donationHistoryBody");
+            if (user.last_donation) {
+                const dateObj = new Date(user.last_donation);
+                const formattedDate = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                historyBody.innerHTML = `
+                    <tr>
+                        <td style="padding: 15px 0; font-weight: 600;">${formattedDate}</td>
+                        <td style="padding: 15px 0; color: var(--gray);">${user.city} Blood Bank</td>
+                        <td style="padding: 15px 0;">1 Unit (Whole Blood)</td>
+                        <td style="padding: 15px 0; text-align: right;">
+                            <span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">COMPLETED</span>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        function getNextEligibilityDate(lastDonationStr) {
+            if (!lastDonationStr) return "Now";
+            const lastDonation = new Date(lastDonationStr);
+            const eligibilityDate = new Date(lastDonation);
+            eligibilityDate.setDate(lastDonation.getDate() + 90);
+            const today = new Date();
+            if (eligibilityDate > today) {
+                return eligibilityDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+            return "Now";
+        }
+
+        function setStatus(status) {
+            updateDonorAvailability(user.id, status);
+            // Refresh info
+            window.location.reload();
+        }
+
+        function handleLogout(event) {
+            event.preventDefault();
+            logout();
+            window.location.href = "login.html";
+        }
+    </script>
+</body>
+</html>
