@@ -3,7 +3,7 @@
 # ==========================================
 
 # Set to True to use MySQL, False to use SQLite Fallback
-USE_MYSQL = True 
+USE_MYSQL = False 
 
 # MySQL Configuration
 MYSQL_CONFIG = {
