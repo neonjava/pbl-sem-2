@@ -17,4 +17,4 @@ Configure database settings through environment variables, install the Python de
 
 ## License
 
-No new license is granted for contributors’ existing code. Contact the contributors before reuse or relicensing.
+Licensed under [AGPL-3.0](LICENSE).
