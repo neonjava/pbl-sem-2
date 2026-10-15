@@ -1,20 +1,11 @@
-# ==========================================
-# DATABASE CREDENTIALS - LifeSaver Network
-# ==========================================
+import os
 
-# Set to True to use MySQL, False to use SQLite Fallback
-USE_MYSQL = False 
-
-# MySQL Configuration
+USE_MYSQL = os.getenv("USE_MYSQL", "false").lower() == "true"
 MYSQL_CONFIG = {
-    'host': 'localhost',
-    'user': 'lifesaver_user',
-    'password': 'lifesaver_pass',
-    'database': 'lifesaver_db'
+    "host": os.getenv("MYSQL_HOST", "localhost"),
+    "user": os.getenv("MYSQL_USER", ""),
+    "password": os.getenv("MYSQL_PASSWORD", ""),
+    "database": os.getenv("MYSQL_DATABASE", "lifesaver_db"),
 }
-
-# SQLite Fallback Configuration
-SQLITE_DB = "donor_data_minimal.db"
-
-# Flask Secret Key
-SECRET_KEY = "lifesaver_mysql_secret_777"
+SQLITE_DB = os.getenv("SQLITE_DB", "donor_data_fallback.db")
+SECRET_KEY = os.environ.get("SECRET_KEY") or os.urandom(32).hex()

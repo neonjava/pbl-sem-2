@@ -13,7 +13,7 @@ try:
 except ImportError:
     USE_MYSQL = False
     SQLITE_DB = "donor_data_fallback.db"
-    SECRET_KEY = "fallback_secret"
+    SECRET_KEY = os.urandom(32).hex()
     MYSQL_CONFIG = {}
 
 app = Flask(__name__)
